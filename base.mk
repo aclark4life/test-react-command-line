@@ -667,6 +667,9 @@ eb-deploy-default:
 eb-init-default:
 	eb init
 
+deploy-default: eb-deploy
+d: deploy
+
 #
 # NPM
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -719,9 +722,8 @@ django-serve-default:
 	cd frontend; npm run watch &
 	python manage.py runserver 0.0.0.0:8000
 
-django-serve-prod-default:
-	cd frontend; npm run watch &
-	python manage.py runserver 0.0.0.0:8000 --settings=backend.settings.production
+serve-default: django-serve
+s: serve
 
 django-settings-default:
 	echo "# $(PROJECT_NAME)" >> $(SETTINGS)
@@ -846,6 +848,7 @@ git-commit-empty-default:
 git-commit-push: git-commit git-push
 git-commit-edit-push: git-commit-edit git-push
 cp: git-commit-push
+ce: git-commit-edit
 
 #
 # Misc
@@ -881,6 +884,8 @@ help-default:  # http://stackoverflow.com/a/26339924
             | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' \
             | xargs | tr ' ' '\n' \
             | awk '{printf "%s\n", $$0}' ; done | less
+
+h: help
 
 isort-default:
 	-isort *.py
@@ -936,13 +941,10 @@ make-default:
 	-git commit -a -m "Add/update project-makefile files"
 	-git push
 
-deploy-default: eb-deploy
 
-serve-default: django-serve
 
 edit-default: readme-edit
 
-serve-prod-default: django-serve-prod
 
 open-default: django-open
 
@@ -961,6 +963,9 @@ pip-freeze-default:
 pip-install-default: pip-upgrade
 	pip3 install wheel
 	pip3 install -r requirements.txt
+
+install-default: pip-install
+i: install
 
 pip-install-test-default:
 	pip3 install -r requirements-test.txt
