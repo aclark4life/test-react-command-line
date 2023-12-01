@@ -1,2 +1,2 @@
-b:
+build:
 	npm run transpile
