@@ -39,4 +39,4 @@ include base.mk
 override PROJECT_NAME := test-react-command-line
 
 # Uncomment the next line to customize the default goal
-#.DEFAULT_GOAL := git-commit-push
+.DEFAULT_GOAL := git-commit-push
