@@ -951,7 +951,7 @@ edit-default: readme-edit
 e-default: edit
 h-default: help
 install-default: pip-install
-i-default: install
+i: install
 git-commit-edit-push-default: git-commit-edit git-push
 git-commit-push-default: git-commit git-push
 gitignore-default: git-ignore
