@@ -1,2 +1,2 @@
 build:
-	npm run transpile
+	npm run babel
