@@ -36,4 +36,4 @@ include project.mk
 #--------------------------------------------------------------------------------
 
 #.DEFAULT_GOAL := project
-#PROJECT_NAME := project
+PROJECT_NAME := test-react-command-line
