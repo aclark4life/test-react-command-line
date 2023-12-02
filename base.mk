@@ -1,13 +1,8 @@
-# Project Makefile
-# ================
+# Project Makefile - https://github.com/project-makefile/project-makefile
 #
 # A generic makefile for projects
 #
-# - https://github.com/project-makefile/project-makefile
-#
-#
 # License
-# ------------------------------------------------------------------------------ 
 #
 # Copyright 2016—2023 Jeffrey A. Clark (Alex)
 #
@@ -28,94 +23,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-#
-#
-# Overview of concepts
-# ------------------------------------------------------------------------------ 
-#
-# Goal
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-# 
-# "By default, the goal is the first target in the makefile (not counting targets
-# that start with a period). Therefore, makefiles are usually written so that the
-# first target is for compiling the entire program or programs they describe. If
-# the first rule in the makefile has several targets, only the first target in the
-# rule becomes the default goal, not the whole list. You can manage the selection
-# of the default goal from within your makefile using the .DEFAULT_GOAL variable
-# (see Other Special Variables)."
-# 
-# - https://www.gnu.org/software/make/manual/html_node/Goals.html
-#
-# Default goal
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
-#  
-# "Sets the default goal to be used if no targets were specified on the command 
-# line (see Arguments to Specify the Goals). The .DEFAULT_GOAL variable allows
-# you to discover the current default goal, restart the default goal selection
-# algorithm by clearing its value, or to explicitly set the default goal."
-#
-# - https://www.gnu.org/software/make/manual/html_node/Special-Variables.html#Special-Variables
-#
-# Variables
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-# "A variable is a name defined in a makefile to represent a string of text, called
-# the variable's value. These values are substituted by explicit request into targets,
-# prerequisites, recipes, and other parts of the makefile."
-#
-# - https://www.gnu.org/software/make/manual/html_node/Using-Variables.html
-#
-# Flavors
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-# "The first flavor of variable is a recursively expanded variable. Variables of
-# this sort are defined by lines using ‘=’ (see Setting Variables) or by the
-# define directive (see Defining Multi-Line Variables). The value you specify
-# is installed verbatim; if it contains references to other variables, these
-# references are expanded whenever this variable is substituted (in the course
-# of expanding some other string). When this happens, it is called recursive expansion.
-#
-# To avoid all the problems and inconveniences of recursively expanded variables,
-# there is another flavor: simply expanded variables.
-#
-# Simply expanded variables are defined by lines using ‘:=’ or ‘::=’ (see Setting
-# Variables). Both forms are equivalent in GNU make; however only the ‘::=’ form
-# is described by the POSIX standard (support for ‘::=’ was added to the POSIX
-# standard in 2012, so older versions of make won’t accept this form either)."
-#
-# - https://www.gnu.org/software/make/manual/html_node/Flavors.html#Flavors
-#
-# Rules
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-# "A rule appears in the makefile and says when and how to remake certain files,
-# called the rule's targets (most often only one per rule). It lists the other
-# files that are the prerequisites of the target, and the recipe to use to
-# create or update the target."
-#
-# - https://www.gnu.org/software/make/manual/html_node/Rules.html
-#
-# Overrides
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-# "Sometimes it is useful to have a makefile that is mostly just like another makefile.
-# You can often use the ‘include’ directive to include one in the other, and add more
-# targets or variable definitions. However, it is invalid for two makefiles to give
-# different recipes for the same target. But there is another way."
-#
-# - https://www.gnu.org/software/make/manual/html_node/Overriding-Makefiles.html
-#
-# Includes
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-# "The include directive tells make to suspend reading the current makefile and
-#  read one or more other makefiles before continuing.
-# 
-# - https://www.gnu.org/software/make/manual/html_node/Include.html
 
+# --------------------------------------------------------------------------------
 # Variables
-# ------------------------------------------------------------------------------  
-#
+# --------------------------------------------------------------------------------
 
 .DEFAULT_GOAL := git-commit-push
 
@@ -123,21 +34,17 @@ GIT_MESSAGE := Update
 
 PROJECT_NAME := project
 
-# http://unix.stackexchange.com/a/37316
 GIT_BRANCHES = `git branch -a \
 	| grep remote \
 	| grep -v HEAD \
 	| grep -v main \
-	| grep -v master`
+	| grep -v master`  # http://unix.stackexchange.com/a/37316
 
-# https://stackoverflow.com/a/589260/185820
-RANDIR := $(shell openssl rand -base64 12 | sed 's/\///g')
+RANDIR := $(shell openssl rand -base64 12 | sed 's/\///g')  # https://stackoverflow.com/a/589260/185820
 
-# https://stackoverflow.com/a/589260/185820
-TMPDIR := $(shell mktemp -d)
+TMPDIR := $(shell mktemp -d)  # https://stackoverflow.com/a/589260/185820
 
-# https://stackoverflow.com/a/589260/185820
-UNAME := $(shell uname)
+UNAME := $(shell uname)  # https://stackoverflow.com/a/589260/185820
 
 define INTERNAL_IPS
 INTERNAL_IPS = ["127.0.0.1",]
@@ -601,27 +508,25 @@ node_modules/
 endef
 
 export ALLAUTH_LAYOUT_BASE
+export AUTHENTICATION_BACKENDS
+export BABELRC
 export BASE_TEMPLATE
+export FRONTEND_APP
+export GIT_IGNORE
 export HOME_PAGE_MODEL
 export HOME_PAGE_TEMPLATE
-export JENKINS_FILE
-export URL_PATTERNS
-export REST_FRAMEWORK
-export AUTHENTICATION_BACKENDS
-export GIT_IGNORE
-export FRONTEND_APP
-export BABELRC
 export INTERNAL_IPS
+export JENKINS_FILE
+export REST_FRAMEWORK
+export URL_PATTERNS
 
+# ------------------------------------------------------------------------------  
 # Rules
 # ------------------------------------------------------------------------------  
-#
-# AWS Elastic Beanstalk
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-# 
 
-# https://stackoverflow.com/a/4731504/185820
-eb-check-env:
+# Elastic Beanstalk
+
+eb-check-env-default:  # https://stackoverflow.com/a/4731504/185820
 ifndef ENV_NAME
 	$(error ENV_NAME is undefined)
 endif
@@ -667,10 +572,7 @@ eb-deploy-default:
 eb-init-default:
 	eb init
 
-#
-# NPM
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
+# npm
 
 npm-init-default:
 	npm init -y
@@ -685,10 +587,7 @@ npm-clean-default:
 	rm -vf package.json
 	rm -vf package-lock.json
 
-#
 # Django
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
 
 django-graph-default:
 	python manage.py graph_models -a -o $(PROJECT_NAME).png
@@ -759,7 +658,7 @@ django-url-patterns-default:
 django-npm-install-default:
 	cd frontend; $(MAKE) npm-install
 
-django-npm-install-dev-default:
+django-npm-install-save-dev-default:
 	cd frontend; npm install \
         eslint-plugin-react \
         eslint-config-standard \
@@ -782,20 +681,12 @@ django-npm-build-default:
 django-open-default:
 	open http://0.0.0.0:8000
 
-django-clean: wagtail-init-clean
-
-migrate: django-migrate
-
-#
 # Git
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
 
 git-ignore-default:
 	echo "$$GIT_IGNORE" > .gitignore
 	-git add .gitignore
 	-git commit -a -m "Add .gitignore"
-	-git push
 
 git-branches-default:
 	-for i in $(GIT_BRANCHES) ; do \
@@ -810,7 +701,6 @@ git-push-default:
 git-commit-edit-default:
 	-git commit -a
 
-git-commit-edit-push-default: git-commit-edit git-push
 
 git-prune-default:
 	git remote update origin --prune
@@ -819,69 +709,42 @@ git-set-upstream-default:
 	git push --set-upstream origin main
 
 git-commit-empty-default:
-	git commit --allow-empty -m "Empty-Commit" ; git push
+	git commit --allow-empty -m "Empty-Commit"
 
-ce: git-commit-edit
-cp: git-commit-push
-git-commit-edit-push: git-commit-edit git-push
-git-commit-push: git-commit git-push
-gitignore: git-ignore
+# Lint
 
-#
-# Misc
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
-
-build: readme-build
-
-black-default:
+lint-black-default:
 	-black *.py
 	-black backend/*.py
 	-black backend/*/*.py
 	-git commit -a -m "A one time black event"
-	-git push
 
-djlint-default:
+lint-djlint-default:
 	-djlint --reformat *.html
 	-djlint --reformat backend/*.html
 	-djlint --reformat backend/*/*.html
 	-git commit -a -m "A one time djlint event"
-	-git push
 
-flake-default:
+lint-flake-default:
 	-flake8 *.py
 	-flake8 backend/*.py
 	-flake8 backend/*/*.py
 
-# Given a base.mk, Makefile and project.mk, and base.mk and project.mk included from Makefile, print target names from all makefiles.
-help-default:  # http://stackoverflow.com/a/26339924
-	@for makefile in $(MAKEFILE_LIST); do \
-        $(MAKE) -pRrq -f $$makefile : 2>/dev/null \
-            | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' \
-            | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' \
-            | xargs | tr ' ' '\n' \
-            | awk '{printf "%s\n", $$0}' ; done | less
-
-h: help
-
-isort-default:
+lint-isort-default:
 	-isort *.py
 	-isort backend/*.py
 	-isort backend/*/*.py
 	-git commit -a -m "A one time isort event"
-	-git push
 
-ruff-default:
+lint-ruff-default:
 	-ruff *.py
 	-ruff backend/*.py
 	-ruff backend/*/*.py
 	-git commit -a -m "A one time ruff event"
-	-git push
 
-jenkins-file-default:
-	@echo "$$JENKINS_FILE" > Jenkinsfile
+# Database
 
-my-init-default:
+mysql-init-default:
 	-mysqladmin -u root drop $(PROJECT_NAME)
 	-mysqladmin -u root create $(PROJECT_NAME)
 
@@ -889,66 +752,24 @@ pg-init-default:
 	-dropdb $(PROJECT_NAME)
 	-createdb $(PROJECT_NAME)
 
-db-init: pg-init
 
-python-serve-default:
-	@echo "\n\tServing HTTP on http://0.0.0.0:8000\n"
-	python -m http.server
-
-rand-default:
-	@openssl rand -base64 12 | sed 's/\///g'
-
-review-default:
-ifeq ($(UNAME), Darwin)
-	@open -a $(REVIEW_EDITOR) `find backend -name \*.py | grep -v migrations` `find backend -name \*.html` `find $(PROJECT_NAME) -name \*.js`
-else
-	@echo "Unsupported"
-endif
-
-usage-default:
-	@echo "Project Makefile"
-	@echo "Usage:"
-	@echo "  make <task>"
-	@echo "Help:"
-	@echo "  make help"
-
-make-default:
-	-git add base.mk
-	-git add Makefile
-	-git commit -a -m "Add/update project-makefile files"
-	-git push
-
-
-
-edit-default: readme-edit
-
-
-open-default: django-open
-
-#
-# Pip
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
+# pip
 
 pip-freeze-default:
 	pip3 freeze | sort > $(TMPDIR)/requirements.txt
 	mv -f $(TMPDIR)/requirements.txt .
 	-git add requirements.txt
 	-git commit -a -m "Freezing requirements."
-	-git push
 
 pip-install-default: pip-upgrade
 	pip3 install wheel
 	pip3 install -r requirements.txt
 
-install-default: pip-install
-i: install
+pip-install-dev-default:
+	pip3 install -r requirements-dev.txt
 
 pip-install-test-default:
 	pip3 install -r requirements-test.txt
-
-pip-install-dev-default:
-	pip3 install -r requirements-dev.txt
 
 pip-install-upgrade-default:
 	cat requirements.txt | awk -F \= '{print $$1}' > $(TMPDIR)/requirements.txt
@@ -957,24 +778,20 @@ pip-install-upgrade-default:
 	pip3 freeze | sort > $(TMPDIR)/requirements.txt
 	mv -f $(TMPDIR)/requirements.txt .
 
-pip-upgrade:
+pip-upgrade-default:
 	pip3 install -U pip
 
 pip-init-default:
 	touch requirements.txt
 	-git add requirements.txt
 
-#
-# Readme
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
+# README
 
 readme-init-default:
 	@echo "$(PROJECT_NAME)" > README.rst
 	@echo "================================================================================" >> README.rst
 	-@git add README.rst
 	-git commit -a -m "Add readme"
-	-git push
 
 readme-edit-default:
 	vi README.rst
@@ -985,10 +802,7 @@ readme-open-default:
 readme-build-default:
 	rst2pdf README.rst
 
-#
 # Sphinx
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
 
 sphinx-init-default:
 	$(MAKE) sphinx-install
@@ -1011,12 +825,8 @@ sphinx-build-pdf-default:
 sphinx-serve-default:
 	cd _build/html;python -m http.server
 
-build: sphinx-build
-
-#
 # Wagtail
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-#
+
 wagtail-init-clean-default:
 	-rm -vf .dockerignore
 	-rm -vf Dockerfile
@@ -1028,9 +838,7 @@ wagtail-init-clean-default:
 	-rm -rvf frontend/
 	-rm -vf README.rst
 
-clean-default: wagtail-init-clean
-
-wagtail-init-default: pg-init wagtail-install
+wagtail-init-default: db-init wagtail-install
 	wagtail start backend .
 	$(MAKE) pip-freeze
 	export SETTINGS=backend/settings/base.py DEV_SETTINGS=backend/settings/dev.py; $(MAKE) django-settings
@@ -1057,7 +865,7 @@ wagtail-init-default: pg-init wagtail-install
 	-git add frontend
 	-git commit -a -m "Add frontend"
 	@$(MAKE) django-npm-install
-	@$(MAKE) django-npm-install-dev
+	@$(MAKE) django-npm-install-save-dev
 	@$(MAKE) cp
 	@$(MAKE) isort
 	@$(MAKE) black
@@ -1065,9 +873,6 @@ wagtail-init-default: pg-init wagtail-install
 	@$(MAKE) flake
 	@$(MAKE) readme
 	@$(MAKE) serve
-
-django-init: wagtail-init
-init-default: wagtail-init
 
 wagtail-install-default:
 	pip3 install \
@@ -1094,17 +899,63 @@ wagtail-install-default:
         wagtail \
         wagtail-seo 
 
+# Help
 
-# Include project-specific makefile
-# ------------------------------------------------------------------------------
-#
+## Given a base.mk, Makefile and project.mk, and base.mk and project.mk included from Makefile,
+## print target names from all makefiles.
 
-PROJECT_MAKEFILE := $(PROJECT_NAME).mk
-include $(PROJECT_MAKEFILE)
+help-default:
+	@for makefile in $(MAKEFILE_LIST); do \
+        $(MAKE) -pRrq -f $$makefile : 2>/dev/null \
+            | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' \
+            | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' \
+            | xargs | tr ' ' '\n' \
+            | awk '{printf "%s\n", $$0}' ; done | less  # http://stackoverflow.com/a/26339924
+
+usage-default:
+	@echo "project-makefile"
+	@echo "Usage:"
+	@echo "  make <task>"
+	@echo "Help:"
+	@echo "  make help"
+
+# Misc
+
+jenkins-init-default:
+	@echo "$$JENKINS_FILE" > Jenkinsfile
+
+make-default:
+	-git add base.mk
+	-git add Makefile
+	-git commit -a -m "Add/update project-makefile files"
+
+python-serve-default:
+	@echo "\n\tServing HTTP on http://0.0.0.0:8000\n"
+	python -m http.server
+
+rand-default:
+	@openssl rand -base64 12 | sed 's/\///g'
+
+review-default:
+ifeq ($(UNAME), Darwin)
+	@open -a $(REVIEW_EDITOR) `find backend -name \*.py | grep -v migrations` `find backend -name \*.html` `find $(PROJECT_NAME) -name \*.js`
+else
+	@echo "Unsupported"
+endif
+
+ce-default: git-commit-edit
+cp-default: git-commit-push
+edit-default: readme-edit
+e-default: edit
+h-default: help
+i-default: pip-install
+git-commit-edit-push-default: git-commit-edit git-push
+git-commit-push-default: git-commit git-push
+gitignore-default: git-ignore
+open-default: django-open
+p-default: git-push
 
 # Overrides
-# ------------------------------------------------------------------------------  
-#
-# https://stackoverflow.com/a/49804748
-%: %-default
+
+%: %-default  # https://stackoverflow.com/a/49804748
 	@ true
