@@ -1,3 +1,4 @@
+PROJECT_NAME := test-react-command-line
 build:
 	npm run babel
 
