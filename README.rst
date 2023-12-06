@@ -3,8 +3,8 @@ test-react-command-line
 
 In which I learn how to transpile.
 
-Install
--------
+Install (``make install``)
+--------------------------
 
 ::
 
@@ -22,8 +22,8 @@ Install
     git add package-lock.json
 
 
-Build (transpile)
------------------
+Build (transpile, ``make build``)
+---------------------------------
 
 ::
 
@@ -37,8 +37,8 @@ Build (transpile)
     Successfully compiled 1 file with Babel (56ms).
 
 
-Serve (run ``node`` on the transpiled component)
-------------------------------------------------
+Serve (run ``node`` on the transpiled component, ``make serve``)
+----------------------------------------------------------------
 
 ::
 
