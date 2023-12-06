@@ -28,26 +28,63 @@
 # Variables
 # --------------------------------------------------------------------------------
 
-.DEFAULT_GOAL := git-commit-push
-
-GIT_MESSAGE := Update
-
-PROJECT_NAME := project
-
 GIT_BRANCHES = `git branch -a \
-	| grep remote \
+	| grep remote  \
 	| grep -v HEAD \
 	| grep -v main \
 	| grep -v master`  # http://unix.stackexchange.com/a/37316
 
 RANDIR := $(shell openssl rand -base64 12 | sed 's/\///g')  # https://stackoverflow.com/a/589260/185820
 
-TMPDIR := $(shell mktemp -d)  # https://stackoverflow.com/a/589260/185820
+TMPDIR := $(shell mktemp -d)# https://stackoverflow.com/a/589260/185820
 
 UNAME := $(shell uname)  # https://stackoverflow.com/a/589260/185820
 
 define INTERNAL_IPS
 INTERNAL_IPS = ["127.0.0.1",]
+endef
+
+define CLOCK_COMPONENT
+import { useState, useEffect } from 'react';
+
+const Clock = () => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Cleanup function to clear the interval when the component is unmounted
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array ensures that the effect runs only once (on mount)
+
+  const formattedTime = currentTime.toLocaleTimeString();
+
+  return (
+    <div>
+      <h2>Current Time:</h2>
+      <p>{formattedTime}</p>
+    </div>
+  );
+};
+export default Clock;
+endef
+
+define FRONTEND_APP
+// eslint-disable-next-line no-unused-vars
+import Clock from '../components/Clock';
+
+const App = () => {
+  return (
+    <div>
+      <h1>React Time Display App</h1>
+      <Clock />
+    </div>
+  );
+};
+
+export default App;
 endef
 
 define BABELRC
@@ -69,61 +106,6 @@ define BABELRC
     "@babel/plugin-transform-class-properties"
   ]
 }
-endef
-
-define FRONTEND_APP
-// Via ChatGPT based on concept by pwellever
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import "../styles/index.scss";
-import "bootstrap/dist/js/bootstrap.bundle";
-
-// eslint-disable-next-line no-unused-vars
-const CustomComponent = ({ componentType, ...otherProps }) => {
-  // Your custom component logic here based on componentType
-  return (
-    <div style={{ border: '1px solid black', padding: '10px', margin: '10px' }}>
-      <p>Component Type: {componentType}</p>
-      <p>Other Props: {JSON.stringify(otherProps)}</p>
-    </div>
-  );
-};
-
-const renderComponents = () => {
-  const root = document.getElementById('root');
-  const elements = root.querySelectorAll('[data-component]');
-
-  elements.forEach((element) => {
-    const componentType = element.getAttribute('data-component');
-    const otherProps = {};
-
-    // Extract other data-* attributes as props
-    Array.from(element.attributes).forEach((attr) => {
-      if (attr.name.startsWith('data-') && attr.name !== 'data-component') {
-        const propKey = attr.name.replace('data-', '');
-        otherProps[propKey] = attr.value;
-      }
-    });
-
-    // Render the custom component
-    createRoot(element).render(
-      <CustomComponent key={element.dataset.key} componentType={componentType} {...otherProps} />
-    );
-  });
-};
-
-// eslint-disable-next-line no-unused-vars
-const App = () => {
-  // Call the function to render components on mount
-  React.useEffect(() => {
-    renderComponents();
-  }, []);
-
-  return null; // You can return null as this component doesn't render anything itself
-};
-
-// Render the main App component
-createRoot(document.getElementById('root')).render(<App />);
 endef
 
 define BASE_TEMPLATE
@@ -511,6 +493,7 @@ export ALLAUTH_LAYOUT_BASE
 export AUTHENTICATION_BACKENDS
 export BABELRC
 export BASE_TEMPLATE
+export CLOCK_COMPONENT
 export FRONTEND_APP
 export GIT_IGNORE
 export HOME_PAGE_MODEL
@@ -656,7 +639,7 @@ django-url-patterns-default:
 	echo "$$URL_PATTERNS" > backend/$(URLS)
 
 django-npm-install-default:
-	cd frontend; $(MAKE) npm-install
+	cd frontend; npm install
 
 django-npm-install-save-dev-default:
 	cd frontend; npm install \
@@ -687,6 +670,7 @@ git-ignore-default:
 	echo "$$GIT_IGNORE" > .gitignore
 	-git add .gitignore
 	-git commit -a -m "Add .gitignore"
+	-git push
 
 git-branches-default:
 	-for i in $(GIT_BRANCHES) ; do \
@@ -700,7 +684,6 @@ git-push-default:
 
 git-commit-edit-default:
 	-git commit -a
-
 
 git-prune-default:
 	git remote update origin --prune
@@ -828,7 +811,7 @@ sphinx-serve-default:
 
 # Wagtail
 
-wagtail-init-clean-default:
+wagtail-clean-default:
 	-rm -vf .dockerignore
 	-rm -vf Dockerfile
 	-rm -vf manage.py
@@ -861,6 +844,7 @@ wagtail-init-default: db-init wagtail-install
 	-git add backend/templates/allauth/layouts/base.html
 	@echo "$$HOME_PAGE_TEMPLATE" > home/templates/home/home_page.html
 	python manage.py webpack_init --no-input
+	@echo "$$CLOCK_COMPONENT" > frontend/src/components/Clock.js
 	@echo "$$FRONTEND_APP" > frontend/src/application/app.js
 	@echo "$$BABELRC" > frontend/.babelrc
 	-git add frontend
@@ -868,11 +852,12 @@ wagtail-init-default: db-init wagtail-install
 	@$(MAKE) django-npm-install
 	@$(MAKE) django-npm-install-save-dev
 	@$(MAKE) cp
-	@$(MAKE) isort
-	@$(MAKE) black
+	@$(MAKE) lint-isort
+	@$(MAKE) lint-black
 	@$(MAKE) cp
-	@$(MAKE) flake
+	@$(MAKE) lint-flake
 	@$(MAKE) readme
+	@$(MAKE) gitignore
 	@$(MAKE) serve
 
 wagtail-install-default:
@@ -900,10 +885,7 @@ wagtail-install-default:
         wagtail \
         wagtail-seo 
 
-# Help
-
-## Given a base.mk, Makefile and project.mk, and base.mk and project.mk included from Makefile,
-## print target names from all makefiles.
+# Misc
 
 help-default:
 	@for makefile in $(MAKEFILE_LIST); do \
@@ -911,16 +893,14 @@ help-default:
             | awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' \
             | sort | egrep -v -e '^[^[:alnum:]]' -e '^$@$$' \
             | xargs | tr ' ' '\n' \
-            | awk '{printf "%s\n", $$0}' ; done | less  # http://stackoverflow.com/a/26339924
+            | awk '{printf "%s\n", $$0}' ; done # http://stackoverflow.com/a/26339924 Given a base.mk, Makefile and project.mk, and base.mk and project.mk included from Makefile, print target names from all makefiles.
 
 usage-default:
-	@echo "project-makefile"
-	@echo "Usage:"
-	@echo "  make <task>"
-	@echo "Help:"
-	@echo "  make help"
-
-# Misc
+	@echo "Project Makefile 🤷"
+	@echo "Usage: make [options] [target] ..."
+	@echo "Examples:"
+	@echo "   make help    Print all targets"
+	@echo "   make usage   Print this message"
 
 jenkins-init-default:
 	@echo "$$JENKINS_FILE" > Jenkinsfile
@@ -929,6 +909,7 @@ make-default:
 	-git add base.mk
 	-git add Makefile
 	-git commit -a -m "Add/update project-makefile files"
+	-git push
 
 python-serve-default:
 	@echo "\n\tServing HTTP on http://0.0.0.0:8000\n"
@@ -946,21 +927,28 @@ endif
 
 build-default: sphinx-build
 b-default: build 
-ce-default: git-commit-edit
+ce-default: git-commit-edit-push
 cp-default: git-commit-push
+clean: wagtail-clean
+db-init: pg-init
+django-init-default: wagtail-init
 edit-default: readme-edit
 e-default: edit
 h-default: help
+init-default: wagtail-init
 install-default: pip-install
 i-default: install
 git-commit-edit-push-default: git-commit-edit git-push
 git-commit-push-default: git-commit git-push
 gitignore-default: git-ignore
 open-default: django-open
+o: open
 p-default: git-push
 readme-default: readme-init
 serve-default: django-serve
+su: django-su
 s-default: serve
+u-default: usage
 
 # Overrides
 
