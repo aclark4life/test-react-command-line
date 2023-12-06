@@ -1,9 +1,9 @@
 PROJECT_NAME := test-react-command-line
-build:
-	npm run babel
-
 install:
 	$(MAKE) npm-install
+
+build:
+	npm run babel
 
 serve:
 	node run start
