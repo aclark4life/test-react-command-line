@@ -4,6 +4,7 @@ install:
 
 build:
 	npm run babel
+	git add dist/
 
 serve:
 	node run start
