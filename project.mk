@@ -7,3 +7,7 @@ build:
 
 serve:
 	node run start
+
+
+clean: npm-clean
+	rm -rvf dist/
