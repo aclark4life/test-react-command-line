@@ -1,7 +1,9 @@
-# Project Makefile - https://github.com/project-makefile/project-makefile
+# Project Makefile
 #
 # A generic makefile for projects.
 #
+# https://github.com/project-makefile/project-makefile
+ 
 # License
 #
 # Copyright 2016—2023 Jeffrey A. Clark (Alex)
@@ -32,59 +34,86 @@ GIT_BRANCHES = `git branch -a \
 	| grep remote  \
 	| grep -v HEAD \
 	| grep -v main \
-	| grep -v master`  # http://unix.stackexchange.com/a/37316
+	| grep -v master`
 
-RANDIR := $(shell openssl rand -base64 12 | sed 's/\///g')  # https://stackoverflow.com/a/589260/185820
-
-TMPDIR := $(shell mktemp -d)# https://stackoverflow.com/a/589260/185820
-
-UNAME := $(shell uname)  # https://stackoverflow.com/a/589260/185820
+UNAME := $(shell uname)
+RANDIR := $(shell openssl rand -base64 12 | sed 's/\///g')
+TMPDIR := $(shell mktemp -d)
 
 define INTERNAL_IPS
 INTERNAL_IPS = ["127.0.0.1",]
 endef
 
-define CLOCK_COMPONENT
-import { useState, useEffect } from 'react';
+define COMPONENT_CLOCK
+// Via ChatGPT
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 
-const Clock = () => {
-  const [currentTime, setCurrentTime] = useState(new Date());
+const Clock = ({ color = '#fff' }) => {
+  const [date, setDate] = useState(new Date());
+  const [blink, setBlink] = useState(true);
+  const timerID = useRef();
+
+  const tick = useCallback(() => {
+    setDate(new Date());
+    setBlink(prevBlink => !prevBlink);
+  }, []);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    timerID.current = setInterval(() => tick(), 1000);
 
-    // Cleanup function to clear the interval when the component is unmounted
-    return () => clearInterval(intervalId);
-  }, []); // Empty dependency array ensures that the effect runs only once (on mount)
+    // Return a cleanup function to be run on component unmount
+    return () => clearInterval(timerID.current);
+  }, [tick]);
 
-  const formattedTime = currentTime.toLocaleTimeString();
+  const formattedDate = date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const formattedTime = date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  });
 
   return (
-    <div>
-      <h2>Current Time:</h2>
-      <p>{formattedTime}</p>
-    </div>
+    <span style={{ color }}>
+      {formattedTime}
+      <span style={{ animation: blink ? 'blink 1s infinite' : 'none' }}>:</span>
+      <span style={{ animation: blink ? 'blink 1s infinite' : 'none' }}>{formattedDate}</span>
+    </span>
   );
 };
+
+Clock.propTypes = {
+  color: PropTypes.string,
+};
+
 export default Clock;
 endef
 
 define FRONTEND_APP
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import "../styles/index.scss";
+import getDataComponents from '../dataComponents';
+import * as components from '../components';
+
 // eslint-disable-next-line no-unused-vars
-import Clock from '../components/Clock';
+import bootstrap from 'bootstrap';
 
-const App = () => {
-  return (
-    <div>
-      <h1>React Time Display App</h1>
-      <Clock />
-    </div>
-  );
-};
-
-export default App;
+const { ErrorBoundary } = components;
+const dataComponents = getDataComponents(components);
+const container = document.getElementById('app');
+const root = createRoot(container);
+const App = () => (
+    <ErrorBoundary>
+      {dataComponents}
+    </ErrorBoundary>
+)
+root.render(<App />);
 endef
 
 define BABELRC
@@ -108,11 +137,53 @@ define BABELRC
 }
 endef
 
+define ESLINTRC
+{
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended"
+    ],
+    "overrides": [
+        {
+            "env": {
+                "node": true
+            },
+            "files": [
+                ".eslintrc.{js,cjs}"
+            ],
+            "parserOptions": {
+                "sourceType": "script"
+            }
+        }
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "react"
+    ],
+    "rules": {
+        "no-unused-vars": "off"
+    },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+}
+endef
+
 define BASE_TEMPLATE
-{% load static wagtailcore_tags wagtailuserbar %}
+{% load static wagtailcore_tags wagtailuserbar webpack_loader %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
     <head>
         <meta charset="utf-8" />
         <title>
@@ -134,20 +205,51 @@ define BASE_TEMPLATE
         <base target="_blank">
         {% endif %}
 
+  		{% stylesheet_pack 'app' %}
+
+		<style>
+		  body {
+		    min-height: 75rem;
+		    padding-top: 4.5rem;
+		  }
+		</style>
+
         {% block extra_css %}
         {# Override this in templates to add extra stylesheets #}
         {% endblock %}
-
-		<link type="text/css" href="{% static 'css/welcome_page.css' %}" rel="stylesheet">
 
 		<link href="{% static 'wagtailadmin/images/favicon.ico' %}" rel="icon">
     </head>
 
     <body class="{% block body_class %}{% endblock %}">
+
+		<nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+		  <div class="container-fluid">
+			<a class="navbar-brand" href="/">Project Makefile</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+			  <span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarCollapse">
+			  <ul class="navbar-nav me-auto mb-2 mb-md-0">
+				<li class="nav-item">
+				  <a class="nav-link active" aria-current="page" href="/">Home</a>
+				</li>
+			  </ul>
+			  <form class="d-flex" role="search">
+				<input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+				<button class="btn btn-outline-success" type="submit">Search</button>
+			  </form>
+			</div>
+		  </div>
+		</nav>
+
         {% wagtailuserbar %}
 
-		<div id="root"></div>
+		<div id="app"></div>
+
         {% block content %}{% endblock %}
+
+		{% javascript_pack 'app' %}
 
         {% block extra_js %}
         {# Override this in templates to add extra javascript #}
@@ -175,221 +277,75 @@ endef
 
 define ALLAUTH_LAYOUT_BASE
 {% extends 'base.html' %}
-{% load i18n %}
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>
-            {% block head_title %}
-            {% endblock head_title %}
-        </title>
-        {% block extra_head %}
-        {% endblock extra_head %}
-    </head>
-    <body>
-        {% block body %}
-            {% if messages %}
-                <div>
-                    <strong>{% trans "Messages:" %}</strong>
-                    <ul>
-                        {% for message in messages %}<li>{{ message }}</li>{% endfor %}
-                    </ul>
-                </div>
-            {% endif %}
-            <div>
-                <strong>{% trans "Menu:" %}</strong>
-                <ul>
-                    {% if user.is_authenticated %}
-                        <li>
-                            <a href="{% url 'account_email' %}">{% trans "Change Email" %}</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'account_logout' %}">{% trans "Sign Out" %}</a>
-                        </li>
-                    {% else %}
-                        <li>
-                            <a href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'account_signup' %}">{% trans "Sign Up" %}</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </div>
-            {% block content %}
-            {% endblock content %}
-        {% endblock body %}
-        {% block extra_body %}
-        {% endblock extra_body %}
-    </body>
-</html>
 endef
 
 define HOME_PAGE_TEMPLATE
 {% extends "base.html" %}
-{% load webpack_loader static i18n wagtailcore_tags %}
-{% block body_class %}{% endblock %}
 {% block extra_css %}
-    {% stylesheet_pack 'app' %}
-    {% include "wagtailseo/meta.html" %}
-{% endblock extra_css %}
+    <style>
+      .success {
+          background-color: #d4edda;
+          border-color: #c3e6cb;
+          color: #155724;
+      }
+      .info {
+          background-color: #d1ecf1;
+          border-color: #bee5eb;
+          color: #0c5460;
+      }
+      .warning {
+          background-color: #fff3cd;
+          border-color: #ffeeba;
+          color: #856404;
+      }
+      .danger {
+          background-color: #f8d7da;
+          border-color: #f5c6cb;
+          color: #721c24;
+      }
+    </style>
+{% endblock %}
 {% block content %}
-    <header class="header">
-        <div class="logo">
-            <a href="/">
-                <svg class="figure-logo"
-                     xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 342.5 126.2">
-                    <title>{% trans "Visit the Wagtail website" %}</title>
-                    <path fill="#FFF" d="M84 1.9v5.7s-10.2-3.8-16.8 3.1c-4.8 5-5.2 10.6-3 18.1 21.6 0 25 12.1 25 12.1L87 27l6.8-8.3c0-9.8-8.1-16.3-9.8-16.8z" />
-                    <circle cx="85.9" cy="15.9" r="2.6" />
-                    <path d="M89.2 40.9s-3.3-16.6-24.9-12.1c-2.2-7.5-1.8-13 3-18.1C73.8 3.8 84 7.6 84 7.6V1.9C80.4.3 77 0 73.2 0 59.3 0 51.6 10.4 48.3 17.4L9.2 89.3l11-2.1-20.2 39 14.1-2.5L24.9 93c30.6 0 69.8-11 64.3-52.1z" />
-                    <path d="M102.4 27l-8.6-8.3L87 27z" />
-                    <path fill="#FFF" d="M30 84.1s1-.2 2.8-.6c1.8-.4 4.3-1 7.3-1.8 1.5-.4 3.1-.9 4.8-1.5 1.7-.6 3.5-1.2 5.2-2 1.8-.7 3.6-1.6 5.4-2.6 1.8-1 3.5-2.1 5.1-3.4.4-.3.8-.6 1.2-1l1.2-1c.7-.7 1.5-1.4 2.2-2.2.7-.7 1.3-1.5 1.9-2.3l.9-1.2.4-.6.4-.6c.2-.4.5-.8.7-1.2.2-.4.4-.8.7-1.2l.3-.6.3-.6c.2-.4.4-.8.5-1.2l.9-2.4c.2-.8.5-1.6.7-2.3.2-.7.3-1.5.5-2.1.1-.7.2-1.3.3-2 .1-.6.2-1.2.2-1.7.1-.5.1-1 .2-1.5.1-1.8.1-2.8.1-2.8l1.6.1s-.1 1.1-.2 2.9c-.1.5-.1 1-.2 1.5-.1.6-.1 1.2-.3 1.8-.1.6-.3 1.3-.4 2-.2.7-.4 1.4-.6 2.2-.2.8-.5 1.5-.8 2.4-.3.8-.6 1.6-1 2.5l-.6 1.2-.3.6-.3.6c-.2.4-.5.8-.7 1.3-.3.4-.5.8-.8 1.2-.1.2-.3.4-.4.6l-.4.6-.9 1.2c-.7.8-1.3 1.6-2.1 2.3-.7.8-1.5 1.4-2.3 2.2l-1.2 1c-.4.3-.8.6-1.3.9-1.7 1.2-3.5 2.3-5.3 3.3-1.8.9-3.7 1.8-5.5 2.5-1.8.7-3.6 1.3-5.3 1.8-1.7.5-3.3 1-4.9 1.3-3 .7-5.6 1.3-7.4 1.6-1.6.6-2.6.8-2.6.8z" />
-                    <g fill="#231F20">
-                    <path d="M127 83.9h-8.8l-12.6-36.4h7.9l9 27.5 9-27.5h7.9l9 27.5 9-27.5h7.9L153 83.9h-8.8L135.6 59 127 83.9zM200.1 83.9h-7V79c-3 3.6-7 5.4-12.1 5.4-3.8 0-6.9-1.1-9.4-3.2s-3.7-5-3.7-8.6c0-3.6 1.3-6.3 4-8 2.6-1.8 6.2-2.7 10.7-2.7h9.9v-1.4c0-4.8-2.7-7.3-8.1-7.3-3.4 0-6.9 1.2-10.5 3.7l-3.4-4.8c4.4-3.5 9.4-5.3 15.1-5.3 4.3 0 7.8 1.1 10.5 3.2 2.7 2.2 4.1 5.6 4.1 10.2v23.7zm-7.7-13.6v-3.1h-8.6c-5.5 0-8.3 1.7-8.3 5.2 0 1.8.7 3.1 2.1 4.1 1.4.9 3.3 1.4 5.7 1.4 2.4 0 4.6-.7 6.4-2.1 1.8-1.3 2.7-3.1 2.7-5.5zM241.7 47.5v31.7c0 6.4-1.7 11.3-5.2 14.5-3.5 3.2-8 4.8-13.4 4.8-5.5 0-10.4-1.7-14.8-5.1l3.6-5.8c3.6 2.7 7.1 4 10.8 4 3.6 0 6.5-.9 8.6-2.8 2.1-1.9 3.2-4.9 3.2-9v-4.7c-1.1 2.1-2.8 3.9-4.9 5.1-2.1 1.3-4.5 1.9-7.1 1.9-4.8 0-8.8-1.7-11.9-5.1-3.1-3.4-4.7-7.6-4.7-12.6s1.6-9.2 4.7-12.6c3.1-3.4 7.1-5.1 11.9-5.1 4.8 0 8.7 2 11.7 6v-5.4h7.5zm-28.4 16.8c0 3 .9 5.6 2.8 7.7 1.8 2.2 4.3 3.2 7.5 3.2 3.1 0 5.7-1 7.6-3.1 1.9-2.1 2.9-4.7 2.9-7.8 0-3.1-1-5.8-2.9-7.9-2-2.2-4.5-3.2-7.6-3.2-3.1 0-5.6 1.1-7.4 3.4-2 2.1-2.9 4.7-2.9 7.7zM260.9 53.6v18.5c0 1.7.5 3.1 1.4 4.1.9 1 2.2 1.5 3.8 1.5 1.6 0 3.2-.8 4.7-2.4l3.1 5.4c-2.7 2.4-5.7 3.6-8.9 3.6-3.3 0-6-1.1-8.3-3.4-2.3-2.3-3.5-5.3-3.5-9.1V53.6h-4.6v-6.2h4.6V36.1h7.7v11.4h9.6v6.2h-9.6zM309.5 83.9h-7V79c-3 3.6-7 5.4-12.1 5.4-3.8 0-6.9-1.1-9.4-3.2s-3.7-5-3.7-8.6c0-3.6 1.3-6.3 4-8 2.6-1.8 6.2-2.7 10.7-2.7h9.9v-1.4c0-4.8-2.7-7.3-8.1-7.3-3.4 0-6.9 1.2-10.5 3.7l-3.4-4.8c4.4-3.5 9.4-5.3 15.1-5.3 4.3 0 7.8 1.1 10.5 3.2 2.7 2.2 4.1 5.6 4.1 10.2v23.7zm-7.7-13.6v-3.1h-8.6c-5.5 0-8.3 1.7-8.3 5.2 0 1.8.7 3.1 2.1 4.1 1.4.9 3.3 1.4 5.7 1.4 2.4 0 4.6-.7 6.4-2.1 1.8-1.3 2.7-3.1 2.7-5.5zM319.3 40.2c-1-1-1.4-2.1-1.4-3.4 0-1.3.5-2.5 1.4-3.4 1-1 2.1-1.4 3.4-1.4 1.3 0 2.5.5 3.4 1.4 1 1 1.4 2.1 1.4 3.4 0 1.3-.5 2.5-1.4 3.4s-2.1 1.4-3.4 1.4c-1.3.1-2.4-.4-3.4-1.4zm7.2 43.7h-7.7V47.5h7.7v36.4zM342.5 83.9h-7.7V33.1h7.7v50.8z" />
-                    </g>
-                </svg>
-            </a>
+    <main class="container">
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert {{ message.tags }} alert-dismissible fade show"
+                         role="alert">
+                        {{ message }}
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="alert"
+                                aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div class="bg-body-tertiary p-5 rounded">
+            <h1>{{ page.title }}</h1>
+            <p class="lead">{{ page.description|default:'' }}</p>
+            {% if user.is_authenticated %}
+                <div class="btn-group" role="group" aria-label="User Actions">
+                    <a class="btn btn-lg btn-primary"
+                       href="{% url 'account_logout' %}"
+                       role="button">Logout &raquo;</a>
+                    <a class="btn btn-lg btn-primary"
+                       href="{% url 'admin:index' %}"
+                       target="_blank"
+                       role="button">Django Admin &raquo;</a>
+                </div>
+            {% else %}
+                <a class="btn btn-lg btn-primary"
+                   href="{% url 'account_login' %}"
+                   role="button">Login &raquo;</a>
+            {% endif %}
         </div>
-        <div class="header-link">
-            {% comment %}
-        This works for all cases but prerelease versions:
-            {% endcomment %}
-            {% trans "View the release notes" %}:
-            <a target="_blank" href="{% wagtail_documentation_path %}/releases/{% wagtail_release_notes_path %}">Wagtail</a> |
-			<a target="_blank" href="https://docs.djangoproject.com/en/4.2/releases/4.2.7/">Django</a> |
-			<a target="_blank" href="https://github.com/facebook/react/releases/tag/v18.2.0">React</a>
-        </div>
-    </header>
-    <main class="main">
-        <div class="">
-            <svg class="figure-space"
-                 xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 300 300"
-                 aria-hidden="true">
-                <path class="egg" fill="currentColor" d="M150 250c-42.741 0-75-32.693-75-90s42.913-110 75-110c32.088 0 75 52.693 75 110s-32.258 90-75 90z" />
-                <ellipse fill="#ddd" cx="150" cy="270" rx="40" ry="7" />
-            </svg>
-        </div>
-        <div class="main-text">
-            <h1>{% trans "Welcome to your new Wagtail site!" %}</h1>
-            <p>
-                {% trans 'Please feel free to <a target="_blank" href="https://wagtail.org/slack/">join our community on Slack</a>, or get started with one of the links below.' %}
-            </p>
-        </div>
+        <div class="lead mt-5">{{ page.body|default:''|safe }}</div>
+        <div data-component="Clock"></div>
     </main>
-    <footer class="footer" role="contentinfo">
-        <a target="_blank" class="option option-one" href="{% wagtail_documentation_path %}/">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7zm2.9 11.1l-.9.6V16h-4v-2.3l-.9-.6C7.8 12.2 7 10.6 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.6-.8 3.2-2.1 4.1z" />
-            </svg>
-            <div>
-                <h2>{% trans "Wagtail Documentation" %}</h2>
-                <p>{% trans "Topics, references, & how-tos" %}</p>
-            </div>
-        </a>
-        <a target="_blank" class="option option-one" href="https://docs.djangoproject.com/en/4.2/">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7zm2.9 11.1l-.9.6V16h-4v-2.3l-.9-.6C7.8 12.2 7 10.6 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.6-.8 3.2-2.1 4.1z" />
-            </svg>
-            <div>
-                <h2>{% trans "Django Documentation" %}</h2>
-                <p>{% trans "Topics, references, & how-tos" %}</p>
-            </div>
-        </a>
-        <a target="_blank" class="option option-one" href="https://react.dev">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7zm2.9 11.1l-.9.6V16h-4v-2.3l-.9-.6C7.8 12.2 7 10.6 7 9c0-2.8 2.2-5 5-5s5 2.2 5 5c0 1.6-.8 3.2-2.1 4.1z" />
-            </svg>
-            <div>
-                <h2>React Documentation</h2>
-                <p>{% trans "Topics, references, & how-tos" %}</p>
-            </div>
-        </a>
-        <a target="_blank" class="option option-two"
-           href="{% wagtail_documentation_path %}/getting_started/tutorial.html">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M0 0h24v24H0V0z" fill="none" />
-                <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
-            </svg>
-            <div>
-                <h2>Wagtail Tutorial</h2>
-                <p>{% trans "Build your first Wagtail site" %}</p>
-            </div>
-        </a>
-        <a target="_blank" class="option option-two"
-           href="https://docs.djangoproject.com/en/4.2/intro/tutorial01/">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M0 0h24v24H0V0z" fill="none" />
-                <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
-            </svg>
-            <div>
-                <h2>Django Tutorial</h2>
-                <p>{% trans "Build your first Wagtail site" %}</p>
-            </div>
-        </a>
-        <a target="_blank"
-           class="option option-three"
-           href="{% url 'wagtailadmin_home' %}">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M0 0h24v24H0z" fill="none" />
-                <path d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75v1.25zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22.88-.3 1.96-.53 3.02-.53 2.44 0 5 1.21 5 1.75v1.25zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5 4 6.57 4 8.5 5.57 12 7.5 12zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5 13 6.57 13 8.5s1.57 3.5 3.5 3.5zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
-            </svg>
-            <div>
-                <h2>Wagtail {% trans "Admin Interface" %}</h2>
-                <p>{% trans "Create your superuser first!" %}</p>
-            </div>
-        </a>
-        <a target="_blank"
-           class="option option-one"
-           href="{% url 'admin:index' %}">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M0 0h24v24H0z" fill="none" />
-                <path d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75v1.25zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22.88-.3 1.96-.53 3.02-.53 2.44 0 5 1.21 5 1.75v1.25zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5 4 6.57 4 8.5 5.57 12 7.5 12zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5 13 6.57 13 8.5s1.57 3.5 3.5 3.5zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
-            </svg>
-            <div>
-                <h2>Django administration</h2>
-                <p>{% trans "Create your superuser first!" %}</p>
-            </div>
-        </a>
-        <a target="_blank"
-           class="option option-one"
-           href="/api">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 24 24"
-                 aria-hidden="true">
-                <path d="M0 0h24v24H0z" fill="none" />
-                <path d="M16.5 13c-1.2 0-3.07.34-4.5 1-1.43-.67-3.3-1-4.5-1C5.33 13 1 14.08 1 16.25V19h22v-2.75c0-2.17-4.33-3.25-6.5-3.25zm-4 4.5h-10v-1.25c0-.54 2.56-1.75 5-1.75s5 1.21 5 1.75v1.25zm9 0H14v-1.25c0-.46-.2-.86-.52-1.22.88-.3 1.96-.53 3.02-.53 2.44 0 5 1.21 5 1.75v1.25zM7.5 12c1.93 0 3.5-1.57 3.5-3.5S9.43 5 7.5 5 4 6.57 4 8.5 5.57 12 7.5 12zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 5.5c1.93 0 3.5-1.57 3.5-3.5S18.43 5 16.5 5 13 6.57 13 8.5s1.57 3.5 3.5 3.5zm0-5.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
-            </svg>
-            <div>
-                <h2>Django REST framework</h2>
-                <p>API Root</p>
-            </div>
-        </a>
-    </footer>
-{% endblock content %}
-{% block extra_js %}
-    {% javascript_pack 'app' attrs='charset="UTF-8"' %}
-    {% include "wagtailseo/struct_data.html" %}
 {% endblock %}
 endef
+
 define JENKINS_FILE
 pipeline {
     agent any
@@ -402,12 +358,14 @@ pipeline {
 	}
 }
 endef
+
 define AUTHENTICATION_BACKENDS
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 endef
+
 define URL_PATTERNS
 from django.conf import settings
 from django.urls import include, path
@@ -424,7 +382,7 @@ from rest_framework import routers, serializers, viewsets
 
 urlpatterns = [
 	path('accounts/', include('allauth.urls')),
-    path('admin/', admin.site.urls),
+    path('django/', admin.site.urls),
     path('wagtail/', include(wagtailadmin_urls)),
 ]
 
@@ -471,6 +429,7 @@ urlpatterns += [
     #    path("pages/", include(wagtail_urls)),
 ]
 endef
+
 define REST_FRAMEWORK
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -480,6 +439,7 @@ REST_FRAMEWORK = {
     ]
 }
 endef
+
 define GIT_IGNORE
 bin/
 __pycache__
@@ -487,21 +447,159 @@ lib/
 lib64
 pyvenv.cfg
 node_modules/
+share/
+endef
+
+define WEBPACK_CONFIG_JS
+const path = require('path');
+
+module.exports = {
+  mode: 'development',
+  entry: './src/index.js',
+  output: {
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+  },
+};
+endef
+
+define WEBPACK_INDEX_JS
+const message = "Hello, World!";
+console.log(message);
+endef
+
+define WEBPACK_INDEX_HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hello, Webpack!</title>
+</head>
+<body>
+  <script src="dist/bundle.js"></script>
+</body>
+</html>
+endef
+
+define REACT_PORTAL
+// Via pwellever
+import React from 'react';
+import { createPortal } from 'react-dom';
+
+const parseProps = data => Object.entries(data).reduce((result, [key, value]) => {
+  if (value.toLowerCase() === 'true') {
+    value = true;
+  } else if (value.toLowerCase() === 'false') {
+    value = false;
+  } else if (value.toLowerCase() === 'null') {
+    value = null;
+  } else if (!isNaN(parseFloat(value)) && isFinite(value)) {
+    // Parse numeric value
+    value = parseFloat(value);
+  } else if (
+    (value[0] === '[' && value.slice(-1) === ']') || (value[0] === '{' && value.slice(-1) === '}')
+  ) {
+    // Parse JSON strings
+    value = JSON.parse(value);
+  }
+
+  result[key] = value;
+  return result;
+}, {});
+
+// This method of using portals instead of calling ReactDOM.render on individual components
+// ensures that all components are mounted under a single React tree, and are therefore able
+// to share context.
+
+export default function getPageComponents (components) {
+  const getPortalComponent = domEl => {
+    // The element's "data-component" attribute is used to determine which component to render.
+    // All other "data-*" attributes are passed as props.
+    const { component: componentName, ...rest } = domEl.dataset;
+    const Component = components[componentName];
+    if (!Component) {
+      console.error(`Component "$${componentName}" not found.`);
+      return null;
+    }
+    const props = parseProps(rest);
+    domEl.innerHTML = '';
+
+    // eslint-disable-next-line no-unused-vars
+    const { ErrorBoundary } = components;
+    return createPortal(
+      <ErrorBoundary>
+        <Component {...props} />
+      </ErrorBoundary>,
+      domEl,
+    );
+  };
+
+  return Array.from(document.querySelectorAll('[data-component]')).map(getPortalComponent);
+}
+endef
+
+define FRONTEND_COMPONENTS
+export { default as Clock } from './Clock';
+export { default as ErrorBoundary } from './ErrorBoundary';
+endef
+
+define COMPONENT_ERROR
+import { Component } from 'react';
+import PropTypes from 'prop-types';
+
+class ErrorBoundary extends Component {
+  constructor (props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError () {
+    return { hasError: true };
+  }
+
+  componentDidCatch (error, info) {
+    const { onError } = this.props;
+    console.error(error);
+    onError && onError(error, info);
+  }
+
+  render () {
+    const { children = null } = this.props;
+    const { hasError } = this.state;
+
+    return hasError ? null : children;
+  }
+}
+
+ErrorBoundary.propTypes = {
+  onError: PropTypes.func,
+  children: PropTypes.node,
+};
+
+export default ErrorBoundary;
 endef
 
 export ALLAUTH_LAYOUT_BASE
 export AUTHENTICATION_BACKENDS
 export BABELRC
 export BASE_TEMPLATE
-export CLOCK_COMPONENT
+export COMPONENT_CLOCK
+export COMPONENT_ERROR
+export ESLINTRC
 export FRONTEND_APP
+export FRONTEND_COMPONENTS
 export GIT_IGNORE
 export HOME_PAGE_MODEL
 export HOME_PAGE_TEMPLATE
 export INTERNAL_IPS
 export JENKINS_FILE
+export REACT_PORTAL
 export REST_FRAMEWORK
 export URL_PATTERNS
+export WEBPACK_CONFIG_JS
+export WEBPACK_INDEX_JS
+export WEBPACK_INDEX_HTML
 
 # ------------------------------------------------------------------------------  
 # Rules
@@ -567,6 +665,8 @@ npm-install-default:
 
 npm-clean-default:
 	rm -rvf node_modules/
+	rm -vf package-lock.json
+	rm -rvf dist/
 
 # Django
 
@@ -639,18 +739,43 @@ django-url-patterns-default:
 django-npm-install-default:
 	cd frontend; npm install
 
+django-npm-install-save-default:
+	cd frontend; npm install \
+        @fortawesome/fontawesome-svg-core \
+        @fortawesome/free-brands-svg-icons \
+        @fortawesome/react-fontawesome \
+        camelize \
+        date-fns-tz \
+        history \
+        mapbox-gl \
+        query-string \
+        react-animate-height \
+        react-chartjs-2 \
+        react-copy-to-clipboard \
+        react-date-range \
+        react-dom \
+        react-dropzone \
+        react-hook-form \
+        react-image-crop \
+        react-map-gl \
+        react-modal \
+        react-quill \
+        react-resize-detector \
+        react-select \
+        react-swipeable \
+        snakeize \
+        striptags \
+        url-join \
+        viewport-mercator-project
+
 django-npm-install-save-dev-default:
 	cd frontend; npm install \
         eslint-plugin-react \
         eslint-config-standard \
         eslint-config-standard-jsx \
-        mapbox-gl \
-        react-date-range \
-        react-image-crop \
-        react-dom \
-		@babel/core \
-		@babel/preset-env \
-		@babel/preset-react \
+        @babel/core \
+        @babel/preset-env \
+        @babel/preset-react \
         --save-dev
 
 django-npm-test-default:
@@ -842,12 +967,17 @@ wagtail-init-default: db-init wagtail-install
 	-git add backend/templates/allauth/layouts/base.html
 	@echo "$$HOME_PAGE_TEMPLATE" > home/templates/home/home_page.html
 	python manage.py webpack_init --no-input
-	@echo "$$CLOCK_COMPONENT" > frontend/src/components/Clock.js
+	@echo "$$COMPONENT_CLOCK" > frontend/src/components/Clock.js
+	@echo "$$COMPONENT_ERROR" > frontend/src/components/ErrorBoundary.js
 	@echo "$$FRONTEND_APP" > frontend/src/application/app.js
+	@echo "$$FRONTEND_COMPONENTS" > frontend/src/components/index.js
+	@echo "$$REACT_PORTAL" > frontend/src/dataComponents.js
 	@echo "$$BABELRC" > frontend/.babelrc
+	@echo "$$ESLINTRC" > frontend/.eslintrc
 	-git add frontend
 	-git commit -a -m "Add frontend"
 	@$(MAKE) django-npm-install
+	@$(MAKE) django-npm-install-save
 	@$(MAKE) django-npm-install-save-dev
 	@$(MAKE) cp
 	@$(MAKE) lint-isort
@@ -903,6 +1033,16 @@ usage-default:
 jenkins-init-default:
 	@echo "$$JENKINS_FILE" > Jenkinsfile
 
+webpack-init-default: npm-init
+	@echo "$$WEBPACK_CONFIG_JS" > webpack.config.js
+	-git add webpack.config.js
+	npm install --save-dev webpack webpack-cli
+	-mkdir -v src/
+	@echo "$$WEBPACK_INDEX_JS" > src/index.js
+	-git add src/index.js
+	@echo "$$WEBPACK_INDEX_HTML" > index.html
+	-git add index.html
+
 make-default:
 	-git add base.mk
 	-git add Makefile
@@ -923,12 +1063,18 @@ else
 	@echo "Unsupported"
 endif
 
+project-mk-default:
+	touch project.mk
+	-git add project.mk
+
 build-default: sphinx-build
 b-default: build 
+c-default: clean
 ce-default: git-commit-edit-push
-clean-default: npm-clean
+clean-default: wagtail-clean
 cp-default: git-commit-push
 db-init-default: pg-init
+django-clean-default: wagtail-clean
 django-init-default: wagtail-init
 edit-default: readme-edit
 e-default: edit
@@ -936,6 +1082,8 @@ h-default: help
 init-default: wagtail-init
 install-default: pip-install
 i-default: install
+migrate-default: django-migrate
+mk-default: project-mk
 git-commit-edit-push-default: git-commit-edit git-push
 git-commit-push-default: git-commit git-push
 gitignore-default: git-ignore
@@ -947,6 +1095,7 @@ serve-default: django-serve
 su-default: django-su
 s-default: serve
 u-default: usage
+webpack-default: webpack-init
 
 # Overrides
 
