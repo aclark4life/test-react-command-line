@@ -29,7 +29,7 @@ Build (transpile, ``make build``)
 
     ┌[alexclark@alexclarks-Air] [/dev/ttys000] [main ⚡] 
     └[~/Developer/test-react-command-line]> make build
-    npm run babel
+    npm run build
 
     > test-react-command-line@1.0.0 babel
     > node_modules/.bin/babel src -d dist --presets @babel/preset-react
