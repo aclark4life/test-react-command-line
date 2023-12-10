@@ -3,7 +3,7 @@ install:
 	$(MAKE) npm-install
 
 build:
-	npm run babel
+	npm run build
 	git add dist/
 
 serve:
